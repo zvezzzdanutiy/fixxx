@@ -4,19 +4,19 @@ import TelegramLoginButton from 'react-telegram-login';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Text } from 'react-native-web';
+import TelegramAuthHandler from './TelegramAuthHandler';
 
 const Home = () => {
   const [joke, setJoke] = useState();
   const [response, setResponse] = useState();
   const [refresh, setRefresh] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [send, setSend] = useState(false);
   let botToken;
-
 (async () => {
   try {
-    const response = await axios.get('https://bba8v1il8ebk39vnaqcv.containers.yandexcloud.net/token');
+    const response = await axios.get('https://bbaaj2g0k9dcmm6ebmo7.containers.yandexcloud.net/token ');
     botToken = response.data;
-    console.log(botToken);
     // Здесь можно выполнять дополнительные действия с botToken
   } catch (error) {
     console.error(error);
@@ -29,19 +29,20 @@ const Home = () => {
     } catch (e) {
     }
   };
-  const sendJokeToTelegram = async (joke) => {
+  const sendJokeToBackend = async (joke) => {
     try {
-      const chatId = response.id; // 
-      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const chatId = response.id;
+      const url = 'https://bbaaj2g0k9dcmm6ebmo7.containers.yandexcloud.net/send-joke';
       const data = {
         chat_id: chatId,
-        text: joke,
+        joke: joke,
       };
     
       await axios.post(url, data);
-      console.log('Анекдот отправлен в бота');
+      console.log('Анекдот отправлен на бэкенд');
+      console.log('Received joke:', joke, 'for chat ID:', chatId);
     } catch (error) {
-      console.error('Ошибка при отправке анекдота в бота:', error);
+      console.error('Ошибка при отправке анекдота на бэкенд:', error);
     }
   };
   
@@ -51,11 +52,10 @@ const Home = () => {
     setIsLoggedIn(true);
     await sendTelegramDataToServer(response);
   };
-  
   const sendTelegramDataToServer = async (response) => {
     let success = false;
     try {
-      const url = 'https://bba8v1il8ebk39vnaqcv.containers.yandexcloud.net/auth';
+      const url = 'https://bbaaj2g0k9dcmm6ebmo7.containers.yandexcloud.net/auth';
       const data = {
         id: response.id,
         first_name: response.first_name,
@@ -68,7 +68,7 @@ const Home = () => {
   
       await axios.post(url, data);
       console.log('Данные отправлены на сервер');
-      success = true;     
+      success = true;   
   
       // Проверка результата на сервере
       const result = await checkResult(response);
@@ -76,7 +76,7 @@ const Home = () => {
   
       // Перенаправление на главную страницу, если результат равен false
       if (!result) {
-        Linking.openURL('https://zvezdanutiyraz.netlify.app/'); 
+        Linking.openURL('https://zvezdanutiyfixx.netlify.app');
       }
     } catch (error) {
       console.error('Ошибка при отправке данных на сервер:', error);
@@ -90,7 +90,7 @@ const Home = () => {
   };
   const checkResult = async (response) => {
     try {
-      const url = 'https://bba8v1il8ebk39vnaqcv.containers.yandexcloud.net/auth';
+      const url = 'https://bbaaj2g0k9dcmm6ebmo7.containers.yandexcloud.net/auth';
       const result = await axios.post(url, response);
       console.log('Результат проверки:', result.data);
   
@@ -110,9 +110,9 @@ const Home = () => {
           'Authorization': encodeURIComponent(object)
         }
       };
-      let url = 'https://bba8v1il8ebk39vnaqcv.containers.yandexcloud.net/anekdot';
+      let url = 'https://bba878ml8a3u9vp5cpug.containers.yandexcloud.net/anekdot';
       if (refresh) {
-        url = 'https://bba8v1il8ebk39vnaqcv.containers.yandexcloud.net/anekdot';
+        url = 'https://bba878ml8a3u9vp5cpug.containers.yandexcloud.net/anekdot';
       }
       const response = await axios.get(url, config);
       console.log(response.data.Text);
@@ -121,12 +121,20 @@ const Home = () => {
       console.error(error);
     }
   };
+  const handleAuthSuccess = () => {
+    // Выполняем необходимые действия после успешной авторизации
+    console.log('Authentication successful');
+    setIsLoggedIn(true);
+  };
+
   const handleRefresh = (value) => {
-    console.log(response)
+    console.log(response);
     setRefresh(value);
-    sendJokeToTelegram(joke);
-    
-  };  
+    if (send === true) {
+      sendJokeToBackend(joke); // Используйте функцию для отправки анекдота на бэкенд
+    }
+    setSend(true);
+  };
 
   useEffect(() => {
     if (refresh) {
@@ -139,6 +147,7 @@ const Home = () => {
   
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <TelegramAuthHandler onAuthSuccess={handleAuthSuccess} />
       {!isLoggedIn && <TelegramLoginButton dataOnauth={handleTelegramResponse} botName="Rjaka_prikol_bot" />}
       {isLoggedIn && (
         <React.Fragment>
